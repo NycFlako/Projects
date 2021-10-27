@@ -1,0 +1,22 @@
+Sid,1900
+Andy,700
+YG,7600
+Lucas,50
+Sir,6500
+Mira,100
+Sidhant,100
+Weidong,100
+Hello,60
+Halo,200
+tu ,100
+kk,0
+Kosbie,15110
+Bug,200
+Bug1,750
+Another Bug,750
+SuperBug,250
+Buggy,950
+Bugs,280
+Bunny,260
+
+Audience,2760
