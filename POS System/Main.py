@@ -79,13 +79,20 @@ class EntryScreen(Mode):
 class initializeSystem(Mode):
     def getDate(mode):
         today = date.today()
-        month, day = today.strftime("%m"), today.strftime("%d")
-        print(month+"-"+day)
-        return month+"-"+day
+        day, dayNum = today.strftime("%A"), today.strftime("%d")
+        monthFull, yearFull = today.strftime("%B"), today.strftime("%Y")
+        workbook = monthFull+"-"+yearFull
+        title = day+" "+dayNum
+        return workbook, title
 
-    def getSheet(mode, path):
-        workBook = load_workbook(path)
-        newSheet = workBook.create_sheet(title = mode.getDate())
+    def getLog(mode, path):
+        (workBookPath, sheetTitle) = mode.getDate()
+        try:
+            workBook = load_workbook(path+workBookPath)
+        except:
+            workBook = Workbook()
+            workBook.save(workBookPath+".xlsx")
+        newSheet = workBook.create_sheet(title = sheetTitle)
         return (workBook, newSheet)
 
     def getCatalog(mode, path):
@@ -93,16 +100,12 @@ class initializeSystem(Mode):
 
     def appStarted(mode):
         mode.catalog = mode.getCatalog("catalog.txt")
-        mode.workBook, mode.sells = mode.getSheet("sellsLog.xlsx")
+        mode.workBook, mode.sells = mode.getLog("sellsLog/")
+        mode.app.setActiveMode(mode.app.entryScreen)
 
+    def timerFired(mode):
         pass
 
-    def keyPressed(mode, event):
-        pass
-
-    def mousePressed(mode, event):
-        pass
-        
     def redrawAll(mode, canvas):
         pass
 
