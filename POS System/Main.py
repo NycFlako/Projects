@@ -84,7 +84,6 @@ class EntryScreen(Mode):
                 mode.app.setActiveMode(mode.app.newOrderScreen)
             elif(event.x in ordersLogButton):
                 mode.app.setActiveMode(mode.app.transactionsLogScreen)
-        pass
 
     def createButtons(mode, canvas):
         Rectangle, Text = canvas.create_rectangle, canvas.create_text
@@ -104,7 +103,7 @@ class EntryScreen(Mode):
         canvas.create_rectangle(0,0, mode.width, mode.height, fill = "black")
         mode.createButtons(canvas)
 
-class initializeSystem(Mode):
+class InitializeSystem(Mode):
     def getDate(mode):
         today = date.today()
         day, dayNum = today.strftime("%A"), today.strftime("%d")
@@ -148,18 +147,83 @@ class Log(Mode):
         pass
 
     def redrawAll(mode, canvas):
+        Rect, Text = canvas.create_rectangle, canvas.create_text
         pass
 
-class newOrder(Mode):
+class NewOrder(Mode):
     def appStarted(mode):
         mode.choices = ["Comida", "Bebida", "Postres", "Otros"]
-        mode.options = ["Pantalla\nPrincipal", "Cancelar", "Finalizar"]
+        mode.options = ["Cancelar\n  Orden", "  Ver\nOrden", "Finalizar\n  Orden"]
         mode.buttonHeight, mode.buttonWidth = 75, 250
-        mode.buttonCx, mode.buttonCy = 350, 150
+        mode.buttonCx, mode.buttonCy = 370, 200
         mode.buttonXGap, mode.buttonYGap = 700, 250
         mode.buttonColor, mode.optionButtonsHeight = "light blue", 200
+        mode.verifyDecision, mode.verifyCy = False, mode.buttonCy+mode.buttonYGap//2
+        mode.verifyWidth, mode.verifyHeight = 250, 150
+        mode.verifyButtonCy = mode.verifyCy+(mode.verifyHeight//5*2)
+        mode.verifyButtonCx = mode.width//2-mode.verifyWidth//2
+        mode.verifyButtonW, mode.verifyButtonH = mode.verifyWidth//4, mode.verifyHeight//4
         pass
 
+    def pressedButtons(mode, event):
+        buttonCy, buttonCx, gap = mode.buttonCy, mode.buttonCx, mode.buttonXGap
+        buttonH, buttonW = mode.buttonHeight, mode.buttonWidth
+        xGap, yGap = mode.buttonXGap, mode.buttonYGap
+        buttonFirstRow = range(buttonCy-buttonH, buttonCy+buttonH+1)
+        buttonSecRow = range(buttonCy+yGap-buttonH, buttonCy+yGap+buttonH+1)
+        buttonFirstCol = range(buttonCx-buttonW, buttonCx+buttonW+1)
+        buttonSecCol = range(buttonCx-buttonW+xGap, buttonCx+buttonW+xGap+1)
+        if(event.x in buttonFirstCol):
+            if(event.y in buttonFirstRow):
+                mode.app.setActiveMode(mode.app.sandwichScreen)
+            elif(event.y in buttonSecRow):
+                mode.app.setActiveMode(mode.app.dessertsScreen)
+        elif(event.x in buttonSecCol):
+            if(event.y in buttonFirstRow):
+                mode.app.setActiveMode(mode.app.beverageScreen)
+            elif(event.y in buttonSecRow):
+                mode.app.setActiveMode(mode.app.otherScreen)
+
+    def pressedVerifyOption(mode, event):
+        noRange = range(mode.verifyButtonCx-mode.verifyButtonW,
+                            mode.verifyButtonCx+mode.verifyButtonW+1)
+        yesRange = range(mode.verifyButtonCx-mode.verifyButtonW+mode.buttonWidth,
+                            mode.verifyButtonCx+mode.verifyButtonW+mode.buttonWidth+1)
+        if(event.x in noRange or event.x in yesRange):
+            mode.verifyDecision = False
+            if(event.x in yesRange):
+                mode.app.setActiveMode(mode.app.entryScreen)
+
+    def pressedOptions(mode, event):
+        if(event.x <= mode.width//3):
+            mode.verifyDecision = True
+            # Create a prompt to ask and make sure that
+            # the user actually wants to cancel the order
+            # and it was not by mistake if so 
+            # Call function to clear the current order
+            # if not just exit out from the prompt
+        elif(event.x <= (mode.width//3)*2):
+            mode.app.setActiveMode(mode.app.currentOrderScreen)
+        else:
+            mode.app.setActiveMode(mode.app.checkoutScreen)
+
+    def mousePressed(mode, event):
+        if(mode.verifyDecision):
+            yRange = range(mode.verifyButtonCy-mode.verifyButtonH, 
+                            mode.verifyButtonCy+mode.verifyButtonH+1)
+            if(event.y in yRange):
+                mode.pressedVerifyOption(event)
+        else:
+            if(event.y >= mode.height-mode.optionButtonsHeight):
+                mode.pressedOptions(event)
+            else:
+                mode.pressedButtons(event)
+        
+    #### To create transparent rectangles 
+    """
+    https://newbedev.com/how-to-make-a-tkinter-canvas-rectangle-transparent
+    
+    """
     def drawOptionButtons(mode, canvas):
         Rect, Oval = canvas.create_rectangle, canvas.create_oval
         Text = canvas.create_text
@@ -169,9 +233,9 @@ class newOrder(Mode):
             buttonCx = (buttonWidth//2) + buttonWidth*i
             buttonCy, message = mode.height-(buttonHeight//2), mode.options[i]
             if i == 0:
-                color = "grey"
-            elif i == 1:
                 color = "indian red"
+            elif i == 1:
+                color = "grey"
             else:
                 color = "light green"
             Rect(buttonWidth*i, mode.height,  buttonWidth*(i+1), 
@@ -194,19 +258,50 @@ class newOrder(Mode):
             Text(buttonCx, buttonCy, text = message, font = buttonFont)
         mode.drawOptionButtons(canvas)
             
-            
-
-
-
+    def drawVerificationButton(mode, canvas):
+        Rect, Oval = canvas.create_rectangle, canvas.create_oval
+        Text = canvas.create_text
+        width, height = mode.verifyWidth, mode.verifyHeight
+        buttonFont = mode.app.entryScreen.buttonFont
+        cx, cy = mode.width/2, mode.verifyCy
+        verifyTextCy = cy-(height//3)
+        buttonCy, buttonCx  = mode.verifyButtonCy, mode.verifyButtonCx
+        buttonW, buttonH, buttonGap = mode.verifyButtonW, mode.verifyButtonH, mode.buttonWidth
+        Rect(cx-width, cy-height, cx+width, cy+height, fill = "grey")
+        Text(cx, verifyTextCy, text ="""¿quieres cancelar esta orden?""",
+            font = buttonFont)
+        Rect(buttonCx-buttonW, buttonCy-buttonH, buttonCx+buttonW, buttonCy+buttonH,
+                fill = "indian red")
+        Rect(buttonCx-buttonW+buttonGap, buttonCy-buttonH, 
+                buttonCx+buttonW+buttonGap, buttonCy+buttonH, fill = "light green")
+        Text(buttonCx, buttonCy, text = "No", font = buttonFont)
+        Text(buttonCx+buttonGap, buttonCy, text = "Si", font = buttonFont)
 
     def redrawAll(mode, canvas):
         Rect, Oval = canvas.create_rectangle, canvas.create_oval
         Rect(0, 0, mode.width, mode.height, fill = "black")
         mode.drawButtons(canvas)
-
+        if(mode.verifyDecision):
+            mode.drawVerificationButton(canvas)
 
 ########## Menu(Sandwiches/Beverages/Desserts) Screens Functions #############    
 class Desserts(Mode):
+    def appStarted(mode):
+        pass
+
+    def mousePressed(mode, event):
+        pass
+
+    def timerFired(mode):
+        pass
+        
+    def redrawAll(mode, canvas):
+        pass
+        
+    def keyPressed(mode, event):
+        pass
+
+class Others(Mode):
     def appStarted(mode):
         pass
 
@@ -243,6 +338,19 @@ class Beverages(Mode):
         pass
 
     def timerFired(mode):
+        pass
+
+    def redrawAll(mode, canvas):
+        pass
+
+class CurrentOrder(Mode):
+    def appStarted(mode):
+        pass
+
+    def timerFired(mode):
+        pass
+
+    def keyPressed(mode, event):
         pass
 
     def redrawAll(mode, canvas):
@@ -312,11 +420,14 @@ class MyApp(ModalApp):
     def appStarted(app):
         app.entryScreen = EntryScreen()
         app.transactionsLogScreen = Log()
-        app.newOrderScreen = newOrder()
+        app.newOrderScreen = NewOrder()
         app.sandwichScreen = Sandwiches()
         app.beverageScreen = Beverages()
         app.checkoutScreen = Checkout()
-        app.initialize = initializeSystem()
+        app.dessertsScreen = Desserts()
+        app.otherScreen = Others()
+        app.currentOrderScreen = CurrentOrder()
+        app.initialize = InitializeSystem()
         app.setActiveMode(app.entryScreen)
         app.timerDelay = 100
 
