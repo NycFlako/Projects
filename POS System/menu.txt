@@ -1,0 +1,7 @@
+Drinks
+Jugo, P30, M50, G60
+Cafe, P20, M30, G60
+Batida,P100
+Agua,10
+Refresco, P25, M50, G70
+Cerveza, P85, M100, G120

@@ -5,6 +5,10 @@ import random, math, copy, time, pygame
 from datetime import date
 from openpyxl import Workbook, load_workbook
 
+
+"""
+Icons used were gathered from flaticon.com
+"""
 '''
 Documentation for Workbooks on openpyxl: https://openpyxl.readthedocs.io/en/stable/tutorial.html
 
@@ -80,18 +84,52 @@ class InitializeSystem(Mode):
             workBook = load_workbook(path+workBookPath)
         except:
             workBook = Workbook()
-            workBook.save(workBookPath+".xlsx")
+            workBook.save(path+workBookPath+".xlsx")
         newSheet = workBook.create_sheet(title = sheetTitle)
         return (workBook, newSheet)
 
-    def getCatalog(mode, path):
+    def getMenuDrinks(mode):
+        return mode.menu[mode.items[0]]
+
+    def getMenuSandwich(mode):
+        return mode.menu[mode.items[1]]
+
+    def getMenuDessert(mode):
+        return mode.menu[mode.items[2]]
+
+    def getMenuOther(mode):
+        return mode.menu[mode.items[3]]
+        
+    def parseMenuLine(mode, s):
+        result, L = "", list()
+        items = s.split(",")
+        for i in range(len(items)):
+            elem = items[i].strip()
+            if(i == 0):
+                result = elem
+            else:
+                L.append(elem)
+        return result, L
+
+    def getMenu(mode, path):
         file = open(path, "r")
+        menu = dict()
         for line in file.readlines():
-            print(len(line))
-        return None
+            if("," not in line):
+                section = line.strip()
+                newDict = dict()
+                menu[section] = newDict
+            else:
+                kind, options = mode.parseMenuLine(line)
+                if(kind in newDict):
+                    print("Already Inside")
+                else:
+                    newDict[kind] = options
+        return menu
 
     def appStarted(mode):
-        mode.catalog = mode.getCatalog("catalog.txt")
+        mode.items = ["Drinks", "Sandwich", "Dessert", "Other"]
+        mode.menu = mode.getMenu("Menu.txt")
         mode.workBook, mode.sells = mode.getLog("sellsLog/")
         mode.initializedScreens = False
         mode.app.setActiveMode(mode.app.logScreen)
@@ -160,8 +198,6 @@ class EntryScreen(Mode):
 class NewOrder(Mode):
     def appStarted(mode):
         if(not mode.app.initializeSystem.initializedScreens):
-            mode.app.setActiveMode(mode.app.dessertScreen)
-        else:
             mode.total = 0
             mode.choices = ["Comida", "Bebida", "Postres", "Otros"]
             mode.options = ["Cancelar\n  Orden", "  Ver\nOrden", "Finalizar\n  Orden"]
@@ -176,6 +212,7 @@ class NewOrder(Mode):
             mode.verifyButtonW, mode.verifyButtonH = mode.verifyWidth//4, mode.verifyHeight//4
             mode.order = Order(list())
             mode.screens = [None, mode.app.currentOrderScreen, mode.app.checkoutScreen]
+            mode.app.setActiveMode(mode.app.dessertScreen)
         pass
 
     def pressedButtons(mode, event):
@@ -354,20 +391,95 @@ class Sandwiches(Mode):
         pass
 
 class Beverages(Mode):
+    def uploadDrinksIcons(mode, path, options):
+        mode.iconImages = dict()
+        for drink in options:
+            newPath = path+drink+"Icon.png"
+            mode.iconImages[drink+"Icon"] = mode.loadImage(newPath)
+            mode.iconImages[drink+"Icon"] = mode.scaleImage(mode.iconImages[drink+"Icon"], 1.5)
+            mode.iconImages[drink+"Icon"].cachedPhotoImage = ImageTk.PhotoImage(mode.iconImages[drink+"Icon"])
+
     def appStarted(mode):
         if(not mode.app.initializeSystem.initializedScreens):
+            mode.drinks = mode.app.initializeSystem.getMenuDrinks()
+            mode.drinksIcons = mode.uploadDrinksIcons("Images/Icons/", mode.drinks)
             mode.app.setActiveMode(mode.app.currentOrderScreen)
+            mode.verifyDecision = False
         else:
-            pass
+            mode.cardCx, mode.cardCy = mode.width//4, mode.height//6+40
+            mode.cardW, mode.cardH = mode.width//6, mode.height//10
+            mode.cardXGap, mode.cardYGap = mode.cardW*3, mode.cardH*3+80
+            mode.iconCx = mode.cardCx-mode.cardW
+            mode.scrolling = False
+            mode.screenRange = (-200, mode.cardCy)
 
-    def keyPressed(mode, event):
-        pass
+    def drawOptionsCards(mode, canvas):
+        Rect, Oval = canvas.create_rectangle, canvas.create_oval
+        cardCx, cardCy, count = mode.cardCx, mode.cardCy, 0
+        cardW, cardH = mode.cardW, mode.cardH
+        xGap, yGap = mode.cardXGap, mode.cardYGap
+        for _ in mode.drinks:
+            xGapInd, yGapInd = count%2, count//2
+            Rect(cardCx-cardW+xGap*xGapInd, cardCy-cardH+yGap*yGapInd, 
+                cardCx+cardW+xGap*xGapInd, cardCy+cardH+yGap*yGapInd, fill = "black")
+            count += 1
 
-    def timerFired(mode):
-        pass
+    def adjustCenter(mode, xGap, yGap, icon):
+        cx, cy = mode.iconCx+mode.cardXGap*xGap, mode.cardCy+mode.cardYGap*yGap
+        if("Cafe" in icon):
+            cy -= 40
+        elif("Jugo" in icon):
+            cy -= 20
+        elif("Batida" in icon):
+            cy -= 27
+        elif("Agua" in icon):
+            cy -= 20
+        return(cx, cy)
+
+    def scrollScreen(mode, dist):
+        newCardCy = mode.cardCy+dist
+        (minimum, maximum) = mode.screenRange 
+        mode.cardCy = min(newCardCy, maximum)
+        mode.cardCy = max(mode.cardCy, minimum)
+
+    def mousePressed(mode, event):
+        modal = mode.app.currentOrderScreen
+        if(modal.verifyDecision):
+            yRange = range(modal.verifyButtonCy-modal.verifyButtonH, 
+                            modal.verifyButtonCy+modal.verifyButtonH+1)
+            if(event.y in yRange):
+                modal.pressedVerifyOption(event)
+        else:
+            if(event.y >= modal.height-modal.optionButtonsHeight):
+                modal.pressedOptions(event)
+
+    def mouseDragged(mode, event):
+        if(mode.scrolling):
+            diff = event.y-mode.scrolling
+            mode.scrollScreen(diff)
+            mode.scrolling = event.y
+        else:
+            mode.scrolling = event.y
+
+    def mouseReleased(mode, event):
+        if(mode.scrolling):
+            mode.scrolling = False
+
+    def drawIcons(mode, canvas):
+        count = 0
+        for option in mode.iconImages:
+            xGapInd, yGapInd = count%2, count//2
+            cx, cy = mode.adjustCenter(xGapInd, yGapInd, option)
+            icon = mode.iconImages[option]
+            canvas.create_image(cx, cy, image = icon.cachedPhotoImage)
+            count += 1
 
     def redrawAll(mode, canvas):
-        pass
+        mode.drawOptionsCards(canvas)
+        mode.drawIcons(canvas)
+        mode.app.currentOrderScreen.drawOptionButtons(canvas)
+        if(mode.app.currentOrderScreen.verifyDecision):
+            mode.app.newOrderScreen.drawVerificationButton(canvas)
 
 class CurrentOrder(Mode):
     def getNewOrderInfo(mode):
@@ -377,17 +489,15 @@ class CurrentOrder(Mode):
         mode.buttonWidth = mode.app.newOrderScreen.buttonWidth
         mode.verifyButtonH = mode.app.newOrderScreen.verifyButtonH
         mode.optionButtonsHeight = mode.app.newOrderScreen.optionButtonsHeight
-        pass
 
     def appStarted(mode):
         if(not mode.app.initializeSystem.initializedScreens):
-            mode.app.setActiveMode(mode.app.checkoutScreen)
-        else:
+            mode.getNewOrderInfo()
             mode.order = mode.app.newOrderScreen.order
             mode.screens = [None, mode.app.newOrderScreen, mode.app.checkoutScreen]
             mode.options = ["Cancelar\n  Orden", "  Volver\n   Atras", "Finalizar\n  Orden"]
-            mode.getNewOrderInfo()
             mode.verifyDecision = False
+            mode.app.setActiveMode(mode.app.checkoutScreen)
             pass
 
     def timerFired(mode):
