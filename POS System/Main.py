@@ -175,7 +175,7 @@ class EntryScreen(Mode):
             if(event.x in newOrderButton):
                 mode.app.setActiveMode(mode.app.newOrderScreen)
             elif(event.x in ordersLogButton):
-                mode.app.setActiveMode(mode.app.transactionsLogScreen)
+                mode.app.setActiveMode(mode.app.logScreen)
 
     def createButtons(mode, canvas):
         Rectangle, Text = canvas.create_rectangle, canvas.create_text
@@ -410,18 +410,24 @@ class Beverages(Mode):
             mode.cardW, mode.cardH = mode.width//6, mode.height//10
             mode.cardXGap, mode.cardYGap = mode.cardW*3, mode.cardH*3+80
             mode.iconCx = mode.cardCx-mode.cardW
-            mode.scrolling = False
-            mode.screenRange = (-200, mode.cardCy)
+            mode.scrolling, mode.cardFont = False, "times 28 bold italic"
+            mode.screenRange, mode.cardTitleH = (-200, mode.cardCy), -25
+
 
     def drawOptionsCards(mode, canvas):
-        Rect, Oval = canvas.create_rectangle, canvas.create_oval
+        Rect, Oval= canvas.create_rectangle, canvas.create_oval
+        Text, cardFont = canvas.create_text, mode.cardFont
         cardCx, cardCy, count = mode.cardCx, mode.cardCy, 0
-        cardW, cardH = mode.cardW, mode.cardH
+        cardW, cardH, cardTitleH = mode.cardW, mode.cardH, mode.cardTitleH
         xGap, yGap = mode.cardXGap, mode.cardYGap
-        for _ in mode.drinks:
+        for drink in mode.drinks:
             xGapInd, yGapInd = count%2, count//2
             Rect(cardCx-cardW+xGap*xGapInd, cardCy-cardH+yGap*yGapInd, 
-                cardCx+cardW+xGap*xGapInd, cardCy+cardH+yGap*yGapInd, fill = "black")
+                cardCx+cardW+xGap*xGapInd, cardCy+cardH+yGap*yGapInd, 
+                fill = "white", outline = "black")
+            Text(cardCx+xGap*xGapInd, cardCy-cardH+yGap*yGapInd+cardTitleH, 
+                text = drink, font = cardFont)
+
             count += 1
 
     def adjustCenter(mode, xGap, yGap, icon):
@@ -471,6 +477,8 @@ class Beverages(Mode):
             xGapInd, yGapInd = count%2, count//2
             cx, cy = mode.adjustCenter(xGapInd, yGapInd, option)
             icon = mode.iconImages[option]
+            if("Refresco" in option):
+                cx -= 10
             canvas.create_image(cx, cy, image = icon.cachedPhotoImage)
             count += 1
 
