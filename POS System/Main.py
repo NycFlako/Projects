@@ -129,7 +129,7 @@ class InitializeSystem(Mode):
 
     def appStarted(mode):
         mode.items = ["Drinks", "Sandwich", "Dessert", "Other"]
-        mode.menu = mode.getMenu("Menu.txt")
+        mode.menu = mode.getMenu("menu.txt")
         mode.workBook, mode.sells = mode.getLog("sellsLog/")
         mode.initializedScreens = False
         mode.app.setActiveMode(mode.app.logScreen)
