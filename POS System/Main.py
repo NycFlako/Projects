@@ -427,6 +427,7 @@ class Beverages(Mode):
                 fill = "white", outline = "black")
             Text(cardCx+xGap*xGapInd, cardCy-cardH+yGap*yGapInd+cardTitleH, 
                 text = drink, font = cardFont)
+                
 
             count += 1
 
