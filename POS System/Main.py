@@ -4,6 +4,9 @@ from PIL import Image
 import random, math, copy, time, pygame
 from datetime import date
 from openpyxl import Workbook, load_workbook
+from Components import *
+
+Cmp = Components()
 
 
 """
@@ -159,23 +162,32 @@ class EntryScreen(Mode):
         else:
             mode.buttonWidth, mode.buttonHeight = 250, 150
             mode.buttonGap, mode.buttonCx, mode.buttonCy = 750, 350, 650
-            mode.buttonFont = "times 28 bold"
+            mode.buttonFont, mode.calcMssg = "times 28 bold", "Calculadora"
+            mode.calcButtonWidth, mode.calcButtonHeight = 250, 75
 
     def timerFired(mode):
         """Add some sort of interactive background"""
         pass
 
     def mousePressed(mode, event):
-        buttonCy, buttonCx, gap = mode.buttonCy, mode.buttonCx, mode.buttonGap
-        buttonH, buttonW = mode.buttonHeight, mode.buttonWidth
-        buttonHeightRange = range(buttonCy-buttonH, buttonCy+buttonH+1)
-        newOrderButton = range(buttonCx-buttonW, buttonCx+buttonW+1)
-        ordersLogButton = range(buttonCx-buttonW+gap, buttonCx+buttonW+gap+1)
-        if(event.y in buttonHeightRange):
-            if(event.x in newOrderButton):
-                mode.app.setActiveMode(mode.app.newOrderScreen)
-            elif(event.x in ordersLogButton):
-                mode.app.setActiveMode(mode.app.logScreen)
+        if mode.app.calculatorOn:
+            button = Cmp.calculatorPressed(mode, event.x, event.y)
+            if(button == "Exit"):
+                mode.app.calculatorOn = False
+        else:
+            buttonCy, buttonCx, gap = mode.buttonCy, mode.buttonCx, mode.buttonGap
+            buttonH, buttonW = mode.buttonHeight, mode.buttonWidth
+            buttonHeightRange = range(buttonCy-buttonH, buttonCy+buttonH+1)
+            newOrderButton = range(buttonCx-buttonW, buttonCx+buttonW+1)
+            ordersLogButton = range(buttonCx-buttonW+gap, buttonCx+buttonW+gap+1)
+            if(event.y in buttonHeightRange):
+                if(event.x in newOrderButton):
+                    mode.app.setActiveMode(mode.app.newOrderScreen)
+                elif(event.x in ordersLogButton):
+                    mode.app.setActiveMode(mode.app.logScreen)
+            elif(event.y < mode.calcButtonHeight and
+                event.x > mode.width-mode.calcButtonWidth):
+                mode.app.calculatorOn = True
 
     def createButtons(mode, canvas):
         Rectangle, Text = canvas.create_rectangle, canvas.create_text
@@ -191,9 +203,20 @@ class EntryScreen(Mode):
                         buttonCx+gap*i+width, buttonCy+height, fill = "grey")
             Text(buttonCx+gap*i, buttonCy, text = message, font = mode.buttonFont)
             
+    def drawCalculatorButton(mode, canvas):
+        Rectangle, Text = canvas.create_rectangle, canvas.create_text
+        width, height = mode.calcButtonWidth, mode.calcButtonHeight
+        Rectangle(mode.width, 0, mode.width-width, height, fill = "white")
+        Text(mode.width-width/2, height/2, text = mode.calcMssg, 
+                font = "times 30 bold italic")
+
     def redrawAll(mode, canvas):
         canvas.create_rectangle(0,0, mode.width, mode.height, fill = "black")
         mode.createButtons(canvas)
+        if(mode.app.calculatorOn):
+            Cmp.drawCalculator(mode, canvas)
+        else:
+            mode.drawCalculatorButton(canvas)
 
 class NewOrder(Mode):
     def appStarted(mode):
@@ -654,6 +677,7 @@ class MyApp(ModalApp):
         app.otherScreen = Others()
         app.currentOrderScreen = CurrentOrder()
         app.initializeSystem = InitializeSystem()
+        app.calculatorOn = False
         app.setActiveMode(app.initializeSystem)
         app.timerDelay = 100
 
