@@ -213,6 +213,7 @@ class EntryScreen(Mode):
     def redrawAll(mode, canvas):
         canvas.create_rectangle(0,0, mode.width, mode.height, fill = "black")
         mode.createButtons(canvas)
+        Cmp.drawOptions(mode, canvas, {"title": "Jugos", "items": ["Limon", "Chinola", "cereza", "avena"]})
         if(mode.app.calculatorOn):
             Cmp.drawCalculator(mode, canvas)
         else:
@@ -474,7 +475,16 @@ class Beverages(Mode):
 
     def mousePressed(mode, event):
         modal = mode.app.currentOrderScreen
-        if(modal.verifyDecision):
+        if(mode.app.showOptions):
+            itemPressed = Cmp.optionsPressed(mode, mode.app.showOptions, event.x, event.y)
+            if(itemPressed == "Exit"):
+                mode.app.showOptions = False
+            elif(itemPressed != None):
+                # Need to get price from the calculator for the item and then 
+                # create an object for the item and add it to the cart
+                price = getPrice
+                print(itemPressed)
+        elif(modal.verifyDecision):
             yRange = range(modal.verifyButtonCy-modal.verifyButtonH, 
                             modal.verifyButtonCy+modal.verifyButtonH+1)
             if(event.y in yRange):
@@ -512,6 +522,9 @@ class Beverages(Mode):
         mode.app.currentOrderScreen.drawOptionButtons(canvas)
         if(mode.app.currentOrderScreen.verifyDecision):
             mode.app.newOrderScreen.drawVerificationButton(canvas)
+        if(mode.app.showOptions):
+            Cmp.drawOptions(mode, canvas, mode.app.showOptions)
+            
 
 class CurrentOrder(Mode):
     def getNewOrderInfo(mode):
@@ -678,6 +691,7 @@ class MyApp(ModalApp):
         app.currentOrderScreen = CurrentOrder()
         app.initializeSystem = InitializeSystem()
         app.calculatorOn = False
+        app.showOptions = False
         app.setActiveMode(app.initializeSystem)
         app.timerDelay = 100
 

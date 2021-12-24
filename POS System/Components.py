@@ -1,9 +1,18 @@
 from tkinter import *
 
+"""
+
+Link to change buttons to be sunked or risen:
+https://www.geeksforgeeks.org/how-to-set-border-of-tkinter-label-widget/
+
+"""
 class Components():
     def __init__(self):
         self.initializeCalculatorDimensions()
         self.initializeCalculator()
+        self.optionsWidth, self.optionsHeight, self.optionsGap = 100, 25, 80
+        self.backDropWidth = 250
+        self.optionsTitleGap, self.optionsTitleFont = 30, "times 40 bold italic"
         
     def initializeCalculatorDimensions(self):
         self.calcSize, self.calcButtonGap, self.calcWidth = 150, 150, 400
@@ -16,7 +25,6 @@ class Components():
         self.calcNumber, self.prevNumber, self.calcOperation = "0", "0", None
         self.calcEnteringNumber = True
 
-    # Component that draws the calculator
     def drawCalculator(self, mode, canvas):
         Rectangle, Text = canvas.create_rectangle, canvas.create_text
         Polygon = canvas.create_polygon
@@ -91,12 +99,17 @@ class Components():
         Text(mssgX0+mssgWidth/2, mssgY0+scHeight/2, text = mode.calcMssg,
                     font = self.calcMssgFont)
 
+    #   Gets the number that was pressed in the x,y coordinate
+    #   on the calculator given the gap between the buttons
     def getNumberPressed(self, x, y, gap):
         numbers = [["1", "2", "3"], ["4", "5", "6"], 
                     ["7", "8", "9"], ["0", "0", "Clear"]]
         row, col = int(y/gap), int(x/gap)
         return numbers[row][col]
 
+    #   Gets the operation that was pressed in the x,y coordinate 
+    #   on the calculator given the height and the width of the
+    #   buttons
     def getOperationPressed(self, x, y, height, width):
         if(y < height):
             return "Borrar"
@@ -107,6 +120,8 @@ class Components():
             row, col = int((y-height)/height), int(x/width)
             return operations[row][col]
 
+    #   Does the current operation that should be done
+    #   on the calculator
     def doOperation(self):
         prev, op, curr = self.prevNumber, self.calcOperation, self.calcNumber
         if(op == None):
@@ -123,6 +138,9 @@ class Components():
         self.calcOperation = None
         self.prevNumber = "0"
 
+    #   Handles any action that should be taken 
+    #   when the calculator is pressed on the given
+    #   x,y coordinate
     def calculatorPressed(self, mode, x, y):
         border, cx, cy = self.calcBorder, mode.width/2, mode.height/2
         width, height, scWidth = self.calcWidth, self.calcHeight, self.calcScreenWidth
@@ -180,7 +198,53 @@ class Components():
             self.prevNumber = self.calcNumber
             self.calcNumber = "0"
 
+    def drawOptions(self, mode, canvas, options):
+        Rectangle, Text = canvas.create_rectangle, canvas.create_text
+        cx, cy, optionsGap = mode.width/2, mode.height/2, self.optionsGap
+        width = self.optionsWidth
+        titleGap, exitSize = self.optionsTitleGap, self.calcExitSize
+        bdWidth, height = self.backDropWidth, self.optionsHeight
+        bdHeight = titleGap+len(options["items"])*(height*2)
 
-            
+        #   Drawing the options box + title + exit sign
+        Rectangle(cx-bdWidth, cy-bdHeight, cx+bdWidth, cy+bdHeight, fill = "white")
+        Text(cx, cy-bdHeight+titleGap, text = options["title"],
+                font = self.optionsTitleFont)
+        Rectangle(cx+bdWidth, cy-bdHeight, cx+bdWidth-exitSize, cy-bdHeight+exitSize,
+                    fill = "red")
+        Text(cx+bdWidth-exitSize/2, cy-bdHeight+exitSize/2, text = "X", 
+                    font = self.calcButtonsFont)
 
+        #   Drawing each of the options
+        for i in range(len(options["items"])):
+            centerY, item = cy-bdHeight+titleGap+optionsGap*(i+1), options["items"][i]
+            Rectangle(cx-width, centerY-height, cx+width, centerY+height,
+                        fill = "grey")
+            Text(cx, centerY, text = item, font = self.calcButtonsFont)
 
+    def optionsPressed(self, mode, options, x, y):
+        cx, cy, optionsGap = mode.width/2, mode.height/2, self.optionsGap
+        width = self.optionsWidth
+        titleGap, exitSize = self.optionsTitleGap, self.calcExitSize
+        bdWidth, height = self.backDropWidth, self.optionsHeight
+        bdHeight = titleGap+len(options["items"])*(height*2)
+
+        #   Checking if exit button was pressed
+        if(x < cx+bdWidth and x > cx + bdWidth - exitSize
+            and y > cy-bdHeight and y < cy-bdHeight+exitSize):
+            return "Exit"
+
+        # Checking to see if x coordinate is outside the width of the options
+        # and the y coordinate is outside the box
+        elif(x < cx-width or x > cx+width or
+            y > cy+bdHeight or y < cy-bdHeight):
+            return None
+
+        else:
+            # Checking to see which item was clicked if any
+            items = options["items"]
+            for i in range(len(items)):
+                centerY, item = cy-bdHeight+titleGap+optionsGap*(i+1), items[i]
+                if(y < centerY+height and y > centerY-height):
+                    return item
+            return None
