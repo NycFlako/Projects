@@ -1,5 +1,5 @@
 Drinks
-Jugo, P30, M50, G60
+Jugo, Limon, Chinola, Avena
 Cafe, P20, M30, G60
 Batida,P100
 Agua,10

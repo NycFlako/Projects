@@ -10,10 +10,16 @@ class Components():
     def __init__(self):
         self.initializeCalculatorDimensions()
         self.initializeCalculator()
+        self.initializeVerifyButtonDimensions()
+        self.initializeOptionsCardsDimensions()
+        self.scrolling = False
         self.optionsWidth, self.optionsHeight, self.optionsGap = 100, 25, 80
         self.backDropWidth = 250
         self.optionsTitleGap, self.optionsTitleFont = 30, "times 40 bold italic"
-        
+
+    def initializeOptionsCardsDimensions(self):
+        self.cardFont = "times 28 bold italic"
+
     def initializeCalculatorDimensions(self):
         self.calcSize, self.calcButtonGap, self.calcWidth = 150, 150, 400
         self.calcHeight, self.calcBorder, self.calcMssgWidth = 400, 30, 200
@@ -21,6 +27,13 @@ class Components():
         self.calcButtonsFont, self.calcNumGap = "times 40 bold", 20
         self.calcMssgFont, self.calcExitSize = "times 35 bold italic", 70
 
+    def initializeVerifyButtonDimensions(self):
+        self.buttonCy, self.buttonYGap, self.verifyWidth = 200, 250, 250
+        self.verifyDecision, self.verifyCy = False, self.buttonCy+self.buttonYGap//2
+        self.verifyHeight, self.buttonWidth, self.buttonFont = 150, 250, "times 28 bold"
+        self.verifyButtonCy = self.verifyCy+(self.verifyHeight//5*2)
+        self.verifyButtonW, self.verifyButtonH = self.verifyWidth//4, self.verifyHeight//4
+            
     def initializeCalculator(self):
         self.calcNumber, self.prevNumber, self.calcOperation = "0", "0", None
         self.calcEnteringNumber = True
@@ -76,7 +89,7 @@ class Components():
         Rectangle(920, 215, 1010, 295, fill = "dark grey", width = 0)
         Text(955, 255, text = "Borrar", font = "times 25 bold")
 
-        # Drawing the operation symbols + enter button
+        # Drawing the operation symbols + enter/= button
         operations = ["+", "-", "*", "/"]
         for i in range(len(operations)):
             op, row, col = operations[i], i//2, i%2 
@@ -88,7 +101,10 @@ class Components():
         enterX0, enterY0 = mssgX0, y0+opHeight
         Rectangle(enterX0, enterY0, enterX0+opWidth*2, enterY0+opHeight,
                     fill = "green")
-        Text(enterX0+opWidth, enterY0+opHeight/2, text = "Enter", font = buttonFont)
+        if(mode.app.getPrice):
+            Text(enterX0+opWidth, enterY0+opHeight/2, text = "Enter", font = buttonFont)
+        else:
+            Text(enterX0+opWidth, enterY0+opHeight/2, text = "=", font = buttonFont)
         
         # Drawing the number displayed on the calculator + message displayed
         numGap = self.calcNumGap
@@ -164,14 +180,14 @@ class Components():
         else:
             return
 
-        if keyPressed.isdigit():
+        if(keyPressed == "Enter"):
+            return keyPressed
+        elif keyPressed.isdigit():
             if(self.calcEnteringNumber):
                 if(self.calcNumber == "0"):
                     self.calcNumber = keyPressed
-                    print(self.calcNumber)
                 else:
                     self.calcNumber = self.calcNumber + keyPressed
-                    print(self.calcNumber)
             else:
                 self.initializeCalculator()
                 self.calcNumber = keyPressed
@@ -248,3 +264,104 @@ class Components():
                 if(y < centerY+height and y > centerY-height):
                     return item
             return None
+
+    def drawVerificationButton(self, mode, canvas):
+        self.verifyButtonCx = mode.width//2-self.verifyWidth//2
+        Rect, Oval = canvas.create_rectangle, canvas.create_oval
+        Text = canvas.create_text
+        width, height = self.verifyWidth, self.verifyHeight
+        buttonFont = self.buttonFont
+        cx, cy = mode.width/2, self.verifyCy
+        verifyTextCy = cy-(height//3)
+        buttonCy, buttonCx  = self.verifyButtonCy, self.verifyButtonCx
+        buttonW, buttonH, buttonGap = self.verifyButtonW, self.verifyButtonH, self.buttonWidth
+
+
+        Rect(cx-width, cy-height, cx+width, cy+height, fill = "grey")
+        Text(cx, verifyTextCy, text ="""¿quieres cancelar esta orden?""",
+            font = buttonFont)
+        Rect(buttonCx-buttonW, buttonCy-buttonH, buttonCx+buttonW, buttonCy+buttonH,
+                fill = "indian red")
+        Rect(buttonCx-buttonW+buttonGap, buttonCy-buttonH, 
+                buttonCx+buttonW+buttonGap, buttonCy+buttonH, fill = "light green")
+        Text(buttonCx, buttonCy, text = "No", font = buttonFont)
+        Text(buttonCx+buttonGap, buttonCy, text = "Si", font = buttonFont)
+
+    def pressedVerifyOption(self, event):
+        noRange = range(self.verifyButtonCx-self.verifyButtonW,
+                            self.verifyButtonCx+self.verifyButtonW+1)
+        yesRange = range(self.verifyButtonCx-self.verifyButtonW+self.buttonWidth,
+                            self.verifyButtonCx+self.verifyButtonW+self.buttonWidth+1)
+        if(event.x in noRange or event.x in yesRange):
+            self.verifyDecision = False
+            if(event.x in yesRange):
+                return True
+        return False
+
+    def drawOptionsCards(self, mode, canvas):
+        Rect, Oval= canvas.create_rectangle, canvas.create_oval
+        self.cardTitleH = -25
+        self.cardW, self.cardH = mode.width//6, mode.height//10
+        self.cardXGap, self.cardYGap = self.cardW*3, self.cardH*3+80
+        self.iconCx = self.cardCx-self.cardW
+        Text, cardFont = canvas.create_text, self.cardFont
+        cardCx, cardCy, count = self.cardCx, self.cardCy, 0
+        cardW, cardH, cardTitleH = self.cardW, self.cardH, self.cardTitleH
+        xGap, yGap = self.cardXGap, self.cardYGap
+
+        for card in mode.cards:
+            xGapInd, yGapInd = count%2, count//2
+            Rect(cardCx-cardW+xGap*xGapInd, cardCy-cardH+yGap*yGapInd, 
+                cardCx+cardW+xGap*xGapInd, cardCy+cardH+yGap*yGapInd, 
+                fill = "white", outline = "black")
+            Text(cardCx+xGap*xGapInd, cardCy-cardH+yGap*yGapInd+cardTitleH, 
+                text = card, font = cardFont)
+            count += 1
+
+    def drawIcons(self, mode, canvas):
+        count = 0
+        for option in mode.iconImages:
+            xGapInd, yGapInd = count%2, count//2
+            cx, cy = self.adjustCenter(xGapInd, yGapInd, option)
+            icon = mode.iconImages[option]
+            if("Refresco" in option):
+                cx -= 10
+            canvas.create_image(cx, cy, image = icon.cachedPhotoImage)
+            count += 1
+    
+    def adjustCenter(self, xGap, yGap, icon):
+        cx, cy = self.iconCx+self.cardXGap*xGap, self.cardCy+self.cardYGap*yGap
+        if("Cafe" in icon):
+            cy -= 40
+        elif("Jugo" in icon):
+            cy -= 20
+        elif("Batida" in icon):
+            cy -= 27
+        elif("Agua" in icon):
+            cy -= 20
+        return(cx, cy)
+
+    def scrollScreen(self, dist):
+        newCardCy = self.cardCy+dist
+        (minimum, maximum) = self.screenRange
+        self.cardCy = min(newCardCy, maximum)
+        self.cardCy = max(self.cardCy, minimum)
+
+    def pressedCard(self, mode, event):
+        count = 0
+        cardCx, cardCy, count = self.cardCx, self.cardCy, 0
+        cardW, cardH = self.cardW, self.cardH
+        xGap, yGap = self.cardXGap, self.cardYGap
+
+        # Rect(cardCx-cardW+xGap*xGapInd, cardCy-cardH+yGap*yGapInd, 
+        #     cardCx+cardW+xGap*xGapInd, cardCy+cardH+yGap*yGapInd, 
+        #     fill = "white", outline = "black")
+        
+        for card in mode.cards:
+            xGapInd, yGapInd  = count%2, count//2
+            xRange = range(cardCx+xGap*xGapInd-cardW, cardCx+xGap*xGapInd+cardW)
+            yRange = range(cardCy+yGap*yGapInd-cardH, cardCy+yGap*yGapInd+cardH)
+            if(event.x in xRange and event.y in yRange):
+                return card
+        return None
+                

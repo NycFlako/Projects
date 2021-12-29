@@ -8,7 +8,6 @@ from Components import *
 
 Cmp = Components()
 
-
 """
 Icons used were gathered from flaticon.com
 """
@@ -58,18 +57,14 @@ This will overwrite any existing workbook with the given name.
 
 To load up a workbook -> wb2 = load_workbook('test.xlsx')
 
-
 ############################ Tricks and Tips #################################
 
 Set date and time using Python date -> ws['A1'] = datetime.datetime(2010, 7, 21)
 
 Adding a formula to a cell -> ws["A1"] = "=SUM(1, 1)"
 
-
-
 '''
 pygame.mixer.init()
-
 
 ########## Initializing the system ############# 
 class InitializeSystem(Mode):
@@ -127,7 +122,7 @@ class InitializeSystem(Mode):
                 if(kind in newDict):
                     print("Already Inside")
                 else:
-                    newDict[kind] = options
+                    newDict[kind] = {"title": kind, "items": options}
         return menu
 
     def appStarted(mode):
@@ -213,7 +208,6 @@ class EntryScreen(Mode):
     def redrawAll(mode, canvas):
         canvas.create_rectangle(0,0, mode.width, mode.height, fill = "black")
         mode.createButtons(canvas)
-        Cmp.drawOptions(mode, canvas, {"title": "Jugos", "items": ["Limon", "Chinola", "cereza", "avena"]})
         if(mode.app.calculatorOn):
             Cmp.drawCalculator(mode, canvas)
         else:
@@ -222,7 +216,7 @@ class EntryScreen(Mode):
 class NewOrder(Mode):
     def appStarted(mode):
         if(not mode.app.initializeSystem.initializedScreens):
-            mode.total = 0
+            mode.total = mode.app.currentOrder.getTotal()
             mode.choices = ["Comida", "Bebida", "Postres", "Otros"]
             mode.options = ["Cancelar\n  Orden", "  Ver\nOrden", "Finalizar\n  Orden"]
             mode.buttonHeight, mode.buttonWidth = 75, 250
@@ -258,21 +252,11 @@ class NewOrder(Mode):
             elif(event.y in buttonSecRow):
                 mode.app.setActiveMode(mode.app.otherScreen)
 
-    def pressedVerifyOption(mode, event):
-        noRange = range(mode.verifyButtonCx-mode.verifyButtonW,
-                            mode.verifyButtonCx+mode.verifyButtonW+1)
-        yesRange = range(mode.verifyButtonCx-mode.verifyButtonW+mode.buttonWidth,
-                            mode.verifyButtonCx+mode.verifyButtonW+mode.buttonWidth+1)
-        if(event.x in noRange or event.x in yesRange):
-            mode.verifyDecision = False
-            if(event.x in yesRange):
-                mode.app.setActiveMode(mode.app.entryScreen)
-
     def pressedOptions(mode, event):
         divider = mode.width//3
         screen = mode.screens[event.x//divider]
         if(screen == None):
-            mode.verifyDecision = True
+            Cmp.verifyDecision = True
             return
         else:
             mode.app.setActiveMode(screen)
@@ -283,11 +267,13 @@ class NewOrder(Mode):
             # if not just exit out from the prompt
             
     def mousePressed(mode, event):
-        if(mode.verifyDecision):
+        if(Cmp.verifyDecision):
             yRange = range(mode.verifyButtonCy-mode.verifyButtonH, 
                             mode.verifyButtonCy+mode.verifyButtonH+1)
             if(event.y in yRange):
-                mode.pressedVerifyOption(event)
+                decision = Cmp.pressedVerifyOption(event)
+                if(decision):
+                    mode.app.setActiveMode(mode.app.entryScreen)
         else:
             if(event.y >= mode.height-mode.optionButtonsHeight):
                 mode.pressedOptions(event)
@@ -314,7 +300,7 @@ class NewOrder(Mode):
                 color = "grey"
             else:
                 color = "light green"
-                message += "\nTotal: "+str(mode.total)+"$"
+                message += "\nTotal: "+str(mode.app.currentOrder.getTotal())+"$"
             Rect(buttonWidth*i, mode.height,  buttonWidth*(i+1), 
                 mode.height-buttonHeight, fill = color)
             Text(buttonCx, buttonCy, text = message, font = buttonFont)
@@ -333,32 +319,13 @@ class NewOrder(Mode):
                 buttonCx+buttonW, buttonCy+buttonH, fill = color)
             Text(buttonCx, buttonCy, text = message, font = buttonFont)
         mode.drawOptionButtons(canvas)
-            
-    def drawVerificationButton(mode, canvas):
-        Rect, Oval = canvas.create_rectangle, canvas.create_oval
-        Text = canvas.create_text
-        width, height = mode.verifyWidth, mode.verifyHeight
-        buttonFont = mode.app.entryScreen.buttonFont
-        cx, cy = mode.width/2, mode.verifyCy
-        verifyTextCy = cy-(height//3)
-        buttonCy, buttonCx  = mode.verifyButtonCy, mode.verifyButtonCx
-        buttonW, buttonH, buttonGap = mode.verifyButtonW, mode.verifyButtonH, mode.buttonWidth
-        Rect(cx-width, cy-height, cx+width, cy+height, fill = "grey")
-        Text(cx, verifyTextCy, text ="""¿quieres cancelar esta orden?""",
-            font = buttonFont)
-        Rect(buttonCx-buttonW, buttonCy-buttonH, buttonCx+buttonW, buttonCy+buttonH,
-                fill = "indian red")
-        Rect(buttonCx-buttonW+buttonGap, buttonCy-buttonH, 
-                buttonCx+buttonW+buttonGap, buttonCy+buttonH, fill = "light green")
-        Text(buttonCx, buttonCy, text = "No", font = buttonFont)
-        Text(buttonCx+buttonGap, buttonCy, text = "Si", font = buttonFont)
 
     def redrawAll(mode, canvas):
         Rect, Oval = canvas.create_rectangle, canvas.create_oval
         Rect(0, 0, mode.width, mode.height, fill = "black")
         mode.drawButtons(canvas)
-        if(mode.verifyDecision):
-            mode.drawVerificationButton(canvas)
+        if(Cmp.verifyDecision):
+            Cmp.drawVerificationButton(mode, canvas)
     
 class Desserts(Mode):
     def appStarted(mode):
@@ -425,56 +392,15 @@ class Beverages(Mode):
 
     def appStarted(mode):
         if(not mode.app.initializeSystem.initializedScreens):
-            mode.drinks = mode.app.initializeSystem.getMenuDrinks()
-            mode.drinksIcons = mode.uploadDrinksIcons("Images/Icons/", mode.drinks)
+            mode.cards = mode.app.initializeSystem.getMenuDrinks()
+            mode.cardsIcons = mode.uploadDrinksIcons("Images/Icons/", mode.cards)
             mode.app.setActiveMode(mode.app.currentOrderScreen)
             mode.verifyDecision = False
-        else:
-            mode.cardCx, mode.cardCy = mode.width//4, mode.height//6+40
-            mode.cardW, mode.cardH = mode.width//6, mode.height//10
-            mode.cardXGap, mode.cardYGap = mode.cardW*3, mode.cardH*3+80
-            mode.iconCx = mode.cardCx-mode.cardW
-            mode.scrolling, mode.cardFont = False, "times 28 bold italic"
-            mode.screenRange, mode.cardTitleH = (-200, mode.cardCy), -25
-
-
-    def drawOptionsCards(mode, canvas):
-        Rect, Oval= canvas.create_rectangle, canvas.create_oval
-        Text, cardFont = canvas.create_text, mode.cardFont
-        cardCx, cardCy, count = mode.cardCx, mode.cardCy, 0
-        cardW, cardH, cardTitleH = mode.cardW, mode.cardH, mode.cardTitleH
-        xGap, yGap = mode.cardXGap, mode.cardYGap
-        for drink in mode.drinks:
-            xGapInd, yGapInd = count%2, count//2
-            Rect(cardCx-cardW+xGap*xGapInd, cardCy-cardH+yGap*yGapInd, 
-                cardCx+cardW+xGap*xGapInd, cardCy+cardH+yGap*yGapInd, 
-                fill = "white", outline = "black")
-            Text(cardCx+xGap*xGapInd, cardCy-cardH+yGap*yGapInd+cardTitleH, 
-                text = drink, font = cardFont)
-                
-
-            count += 1
-
-    def adjustCenter(mode, xGap, yGap, icon):
-        cx, cy = mode.iconCx+mode.cardXGap*xGap, mode.cardCy+mode.cardYGap*yGap
-        if("Cafe" in icon):
-            cy -= 40
-        elif("Jugo" in icon):
-            cy -= 20
-        elif("Batida" in icon):
-            cy -= 27
-        elif("Agua" in icon):
-            cy -= 20
-        return(cx, cy)
-
-    def scrollScreen(mode, dist):
-        newCardCy = mode.cardCy+dist
-        (minimum, maximum) = mode.screenRange 
-        mode.cardCy = min(newCardCy, maximum)
-        mode.cardCy = max(mode.cardCy, minimum)
+            Cmp.cardCx, Cmp.cardCy = mode.width//4, mode.height//6+40
+            Cmp.screenRange = (-200, Cmp.cardCy)
+            mode.scrolling = False
 
     def mousePressed(mode, event):
-        modal = mode.app.currentOrderScreen
         if(mode.app.showOptions):
             itemPressed = Cmp.optionsPressed(mode, mode.app.showOptions, event.x, event.y)
             if(itemPressed == "Exit"):
@@ -482,48 +408,52 @@ class Beverages(Mode):
             elif(itemPressed != None):
                 # Need to get price from the calculator for the item and then 
                 # create an object for the item and add it to the cart
-                price = getPrice
-                print(itemPressed)
-        elif(modal.verifyDecision):
-            yRange = range(modal.verifyButtonCy-modal.verifyButtonH, 
-                            modal.verifyButtonCy+modal.verifyButtonH+1)
+                mode.app.calculatorOn, mode.app.getPrice = True, True
+                mode.calcMssg = itemPressed
+                mode.app.showOptions = False
+        elif(mode.app.calculatorOn):
+            button = Cmp.calculatorPressed(mode, event.x, event.y)
+            if(button == "Enter"):
+                mode.app.calculatorOn, mode.app.getPrice = False, False
+                mode.calcMssg = "Calculadora"
+                newDrink = Beverage(mode.calcMssg, int(Cmp.calcNumber))
+                mode.app.currentOrder.addItem(newDrink)
+        elif(Cmp.verifyDecision):
+            yRange = range(Cmp.verifyButtonCy-Cmp.verifyButtonH, 
+                            Cmp.verifyButtonCy+Cmp.verifyButtonH+1)
             if(event.y in yRange):
-                modal.pressedVerifyOption(event)
+                decision = Cmp.pressedVerifyOption(event)
+                if(decision):
+                    mode.app.setActiveMode(mode.app.entryScreen)
         else:
-            if(event.y >= modal.height-modal.optionButtonsHeight):
-                modal.pressedOptions(event)
+            cardPressed = Cmp.pressedCard(mode, event)
+            if(cardPressed != None):
+                mode.app.showOptions = mode.cards[cardPressed]
+            else:
+                mode.app.currentOrderScreen.pressedOptions(event)
 
     def mouseDragged(mode, event):
-        if(mode.scrolling):
-            diff = event.y-mode.scrolling
-            mode.scrollScreen(diff)
-            mode.scrolling = event.y
+        if(Cmp.scrolling):
+            diff = event.y-Cmp.scrolling
+            Cmp.scrollScreen(diff)
+            Cmp.scrolling = event.y
         else:
-            mode.scrolling = event.y
+            Cmp.scrolling = event.y
 
     def mouseReleased(mode, event):
-        if(mode.scrolling):
-            mode.scrolling = False
-
-    def drawIcons(mode, canvas):
-        count = 0
-        for option in mode.iconImages:
-            xGapInd, yGapInd = count%2, count//2
-            cx, cy = mode.adjustCenter(xGapInd, yGapInd, option)
-            icon = mode.iconImages[option]
-            if("Refresco" in option):
-                cx -= 10
-            canvas.create_image(cx, cy, image = icon.cachedPhotoImage)
-            count += 1
+        if(Cmp.scrolling):
+            Cmp.scrolling = False
 
     def redrawAll(mode, canvas):
-        mode.drawOptionsCards(canvas)
-        mode.drawIcons(canvas)
+        Cmp.drawOptionsCards(mode, canvas)
+        Cmp.drawIcons(mode, canvas)
         mode.app.currentOrderScreen.drawOptionButtons(canvas)
-        if(mode.app.currentOrderScreen.verifyDecision):
-            mode.app.newOrderScreen.drawVerificationButton(canvas)
+        if(Cmp.verifyDecision):
+            Cmp.drawVerificationButton(mode, canvas)
         if(mode.app.showOptions):
             Cmp.drawOptions(mode, canvas, mode.app.showOptions)
+        if(mode.app.calculatorOn):
+            Cmp.drawCalculator(mode, canvas)
             
 
 class CurrentOrder(Mode):
@@ -552,27 +482,19 @@ class CurrentOrder(Mode):
         divider = mode.width//3
         screen = mode.screens[event.x//divider]
         if(screen == None):
-            mode.verifyDecision = True
+            Cmp.verifyDecision = True
             return
         else:
             mode.app.setActiveMode(screen)
 
-    def pressedVerifyOption(mode, event):
-        noRange = range(mode.verifyButtonCx-mode.verifyButtonW,
-                            mode.verifyButtonCx+mode.verifyButtonW+1)
-        yesRange = range(mode.verifyButtonCx-mode.verifyButtonW+mode.buttonWidth,
-                            mode.verifyButtonCx+mode.verifyButtonW+mode.buttonWidth+1)
-        if(event.x in noRange or event.x in yesRange):
-            mode.verifyDecision = False
-            if(event.x in yesRange):
-                mode.app.setActiveMode(mode.app.entryScreen)
-
     def mousePressed(mode, event):
-        if(mode.verifyDecision):
+        if(Cmp.verifyDecision):
             yRange = range(mode.verifyButtonCy-mode.verifyButtonH, 
                             mode.verifyButtonCy+mode.verifyButtonH+1)
             if(event.y in yRange):
-                mode.pressedVerifyOption(event)
+                decision = Cmp.pressedVerifyOption(event)
+                if(decision):
+                    mode.app.setActiveMode(mode.app.entryScreen)
         else:
             if(event.y >= mode.height-mode.optionButtonsHeight):
                 mode.pressedOptions(event)
@@ -591,15 +513,15 @@ class CurrentOrder(Mode):
                 color = "grey"
             else:
                 color = "light green"
-                message += "\nTotal: "+str(mode.app.newOrderScreen.total)+"$"
+                message += "\nTotal: "+str(mode.app.currentOrder.getTotal())+"$"
             Rect(buttonWidth*i, mode.height,  buttonWidth*(i+1), 
                 mode.height-buttonHeight, fill = color)
             Text(buttonCx, buttonCy, text = message, font = buttonFont)
       
     def redrawAll(mode, canvas):
         mode.drawOptionButtons(canvas)
-        if(mode.verifyDecision):
-            mode.app.newOrderScreen.drawVerificationButton(canvas)
+        if(Cmp.verifyDecision):
+            Cmp.drawVerificationButton(mode, canvas)
         pass
 
 class Checkout(Mode):
@@ -628,14 +550,10 @@ class Sandwich(object):
         pass
 
 class Beverage(object):
-    def __init__(self, kind):
-        self.name = kind
-        pass
-
-class AddOn(object):
     def __init__(self, kind, price):
         self.name = kind
         self.price = price
+        pass
 
 class Order(object):
     def __init__(self, cart):
@@ -660,6 +578,9 @@ class Order(object):
             if(type(order) == Beverage):
                 result.append(order)
         return result
+    
+    def addItem(self, item):
+        self.cart.append(item)
 
     """
     To get the time for each transaction we do time = now.strftime("%X")
@@ -690,8 +611,9 @@ class MyApp(ModalApp):
         app.otherScreen = Others()
         app.currentOrderScreen = CurrentOrder()
         app.initializeSystem = InitializeSystem()
-        app.calculatorOn = False
+        app.calculatorOn, app.getPrice = False, False
         app.showOptions = False
+        app.currentOrder = Order([])
         app.setActiveMode(app.initializeSystem)
         app.timerDelay = 100
 
