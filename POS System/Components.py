@@ -363,5 +363,6 @@ class Components():
             yRange = range(cardCy+yGap*yGapInd-cardH, cardCy+yGap*yGapInd+cardH)
             if(event.x in xRange and event.y in yRange):
                 return card
+            count += 1
         return None
                 

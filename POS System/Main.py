@@ -418,6 +418,9 @@ class Beverages(Mode):
                 mode.calcMssg = "Calculadora"
                 newDrink = Beverage(mode.calcMssg, int(Cmp.calcNumber))
                 mode.app.currentOrder.addItem(newDrink)
+            elif(button == "Exit"):
+                mode.app.calculatorOn, mode.app.getPrice = False, False
+                mode.calcMssg = "Calculadora"
         elif(Cmp.verifyDecision):
             yRange = range(Cmp.verifyButtonCy-Cmp.verifyButtonH, 
                             Cmp.verifyButtonCy+Cmp.verifyButtonH+1)
@@ -427,9 +430,10 @@ class Beverages(Mode):
                     mode.app.setActiveMode(mode.app.entryScreen)
         else:
             cardPressed = Cmp.pressedCard(mode, event)
+
             if(cardPressed != None):
                 mode.app.showOptions = mode.cards[cardPressed]
-            else:
+            elif(event.y >= mode.height-mode.app.currentOrderScreen.optionButtonsHeight):
                 mode.app.currentOrderScreen.pressedOptions(event)
 
     def mouseDragged(mode, event):
