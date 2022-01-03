@@ -1,7 +1,7 @@
 from cmu_112_graphics import *
 from tkinter import *
 from PIL import Image
-import random, math, copy, time, pygame
+import random, math, copy, time, pygame, calendar
 from datetime import date
 from openpyxl import Workbook, load_workbook
 from Components import *
@@ -70,21 +70,32 @@ pygame.mixer.init()
 class InitializeSystem(Mode):
     def getDate(mode):
         today = date.today()
-        day, dayNum = today.strftime("%A"), today.strftime("%d")
         monthFull, yearFull = today.strftime("%B"), today.strftime("%Y")
+        monthNum, mode.dayNum = today.strftime("%m"), today.strftime("%d")
         workbook = monthFull+"-"+yearFull
-        title = day+" "+dayNum
-        return workbook, title
+        return workbook, int(yearFull), int(monthNum)
 
     def getLog(mode, path):
-        (workBookPath, sheetTitle) = mode.getDate()
+        (workBookPath, year, month) = mode.getDate()
         try:
             workBook = load_workbook(path+workBookPath)
         except:
             workBook = Workbook()
+            mode.workBookPath = path+workBookPath+".xlsx"
             workBook.save(path+workBookPath+".xlsx")
-        newSheet = workBook.create_sheet(title = sheetTitle)
-        return (workBook, newSheet)
+        try:
+            currentSheet = workBook["Ventas"]
+        except:
+            currentSheet = workBook.create_sheet(title = "Ventas")
+            numDays = calendar.monthrange(year, month)[1]
+            headers = ["Fecha", "Total", "Comida", "Bebidas", "Postres", "Otros"]
+            for i in range(len(headers)):
+                cell = chr(ord("A") + i)+"1"
+                currentSheet[cell] = headers[i]
+            for i in range(2, numDays+2):
+                currentSheet["A"+str(i)] = str(i)+"/"+str(month)
+            workBook.save(path+workBookPath+".xlsx")
+        return (workBook, currentSheet)
 
     def getMenuDrinks(mode):
         return mode.menu[mode.items[0]]
@@ -140,6 +151,24 @@ class Log(Mode):
         else:
             pass
 
+    def writeOrder(mode, order):
+        workBook = mode.app.initializeSystem.workBook
+        workSheet = mode.app.initializeSystem.sells
+        day = mode.app.initializeSystem.dayNum
+        total = order.getTotal()
+        hashMap = {"total": 1, str(Sandwich): 2,
+                    str(Beverage): 3, str(Dessert): 4, str(Other): 5}
+        for item in order.cart:
+            key = str(type(item))
+            cell = chr(ord("A") + hashMap[key])+day
+            if(workSheet[cell].value == None):
+                workSheet[cell].value = 0
+            workSheet[cell] = workSheet[cell].value + item.price
+        if(workSheet["B"+day].value == None):
+            workSheet["B"+day].value = 0
+        workSheet["B"+day] = workSheet["B"+day].value + total
+        workBook.save(filename = mode.app.initializeSystem.workBookPath)
+        
     def keyPressed(mode, event):
         pass
 
@@ -228,8 +257,7 @@ class NewOrder(Mode):
             mode.verifyButtonCy = mode.verifyCy+(mode.verifyHeight//5*2)
             mode.verifyButtonCx = mode.width//2-mode.verifyWidth//2
             mode.verifyButtonW, mode.verifyButtonH = mode.verifyWidth//4, mode.verifyHeight//4
-            mode.order = Order(list())
-            mode.screens = [None, mode.app.currentOrderScreen, mode.app.checkoutScreen]
+            mode.order = Order()
             mode.app.setActiveMode(mode.app.dessertScreen)
         pass
 
@@ -252,14 +280,6 @@ class NewOrder(Mode):
             elif(event.y in buttonSecRow):
                 mode.app.setActiveMode(mode.app.otherScreen)
 
-    def pressedOptions(mode, event):
-        divider = mode.width//3
-        screen = mode.screens[event.x//divider]
-        if(screen == None):
-            Cmp.verifyDecision = True
-            return
-        else:
-            mode.app.setActiveMode(screen)
             # Create a prompt to ask and make sure that
             # the user actually wants to cancel the order
             # and it was not by mistake if so 
@@ -273,10 +293,23 @@ class NewOrder(Mode):
             if(event.y in yRange):
                 decision = Cmp.pressedVerifyOption(event)
                 if(decision):
+                    mode.app.currentOrder = Order()
                     mode.app.setActiveMode(mode.app.entryScreen)
         else:
             if(event.y >= mode.height-mode.optionButtonsHeight):
-                mode.pressedOptions(event)
+                screen = Cmp.orderOptionsPressed(mode, event)
+                if(screen != None):
+                    if(screen == mode.app.newOrderScreen):
+                        mode.app.currentOrder = Order()
+                        mode.app.setActiveMode(screen)
+                    elif(screen == "checkout"):
+                        if(mode.app.currentOrder.getTotal != 0):
+                            mode.app.logScreen.writeOrder(mode.app.currentOrder)
+                            mode.app.currentOrder = Order()
+                            mode.app.setActiveMode(mode.app.entryScreen)
+                        return
+                    else:
+                        mode.app.setActiveMode(screen)
             else:
                 mode.pressedButtons(event)
         
@@ -318,7 +351,7 @@ class NewOrder(Mode):
             Rect(buttonCx-buttonW, buttonCy-buttonH, 
                 buttonCx+buttonW, buttonCy+buttonH, fill = color)
             Text(buttonCx, buttonCy, text = message, font = buttonFont)
-        mode.drawOptionButtons(canvas)
+        Cmp.drawOrderOptions(mode, canvas)
 
     def redrawAll(mode, canvas):
         Rect, Oval = canvas.create_rectangle, canvas.create_oval
@@ -418,6 +451,8 @@ class Beverages(Mode):
                 mode.calcMssg = "Calculadora"
                 newDrink = Beverage(mode.calcMssg, int(Cmp.calcNumber))
                 mode.app.currentOrder.addItem(newDrink)
+                Cmp.calcNumber = "0"
+                mode.app.showOptions = False
             elif(button == "Exit"):
                 mode.app.calculatorOn, mode.app.getPrice = False, False
                 mode.calcMssg = "Calculadora"
@@ -427,6 +462,7 @@ class Beverages(Mode):
             if(event.y in yRange):
                 decision = Cmp.pressedVerifyOption(event)
                 if(decision):
+                    mode.app.currentOrder = Order()
                     mode.app.setActiveMode(mode.app.entryScreen)
         else:
             cardPressed = Cmp.pressedCard(mode, event)
@@ -434,7 +470,19 @@ class Beverages(Mode):
             if(cardPressed != None):
                 mode.app.showOptions = mode.cards[cardPressed]
             elif(event.y >= mode.height-mode.app.currentOrderScreen.optionButtonsHeight):
-                mode.app.currentOrderScreen.pressedOptions(event)
+                screen = Cmp.orderOptionsPressed(mode, event)
+                if(screen != None):
+                    if(screen == mode.app.newOrderScreen):
+                        mode.app.currentOrder = Order()
+                        mode.app.setActiveMode(screen)
+                    elif(screen == "checkout"):
+                        if(mode.app.currentOrder.getTotal != 0):
+                            mode.app.logScreen.writeOrder(mode.app.currentOrder)
+                            mode.app.currentOrder = Order()
+                            mode.app.setActiveMode(mode.app.entryScreen)
+                        return
+                    else:
+                        mode.app.setActiveMode(screen)
 
     def mouseDragged(mode, event):
         if(Cmp.scrolling):
@@ -451,7 +499,7 @@ class Beverages(Mode):
     def redrawAll(mode, canvas):
         Cmp.drawOptionsCards(mode, canvas)
         Cmp.drawIcons(mode, canvas)
-        mode.app.currentOrderScreen.drawOptionButtons(canvas)
+        Cmp.drawOrderOptions(mode, canvas)
         if(Cmp.verifyDecision):
             Cmp.drawVerificationButton(mode, canvas)
         if(mode.app.showOptions):
@@ -459,7 +507,6 @@ class Beverages(Mode):
         if(mode.app.calculatorOn):
             Cmp.drawCalculator(mode, canvas)
             
-
 class CurrentOrder(Mode):
     def getNewOrderInfo(mode):
         mode.verifyButtonCy = mode.app.newOrderScreen.verifyButtonCy
@@ -473,7 +520,6 @@ class CurrentOrder(Mode):
         if(not mode.app.initializeSystem.initializedScreens):
             mode.getNewOrderInfo()
             mode.order = mode.app.newOrderScreen.order
-            mode.screens = [None, mode.app.newOrderScreen, mode.app.checkoutScreen]
             mode.options = ["Cancelar\n  Orden", "  Volver\n   Atras", "Finalizar\n  Orden"]
             mode.verifyDecision = False
             mode.app.setActiveMode(mode.app.checkoutScreen)
@@ -482,15 +528,6 @@ class CurrentOrder(Mode):
     def timerFired(mode):
         pass
 
-    def pressedOptions(mode, event):
-        divider = mode.width//3
-        screen = mode.screens[event.x//divider]
-        if(screen == None):
-            Cmp.verifyDecision = True
-            return
-        else:
-            mode.app.setActiveMode(screen)
-
     def mousePressed(mode, event):
         if(Cmp.verifyDecision):
             yRange = range(mode.verifyButtonCy-mode.verifyButtonH, 
@@ -498,32 +535,26 @@ class CurrentOrder(Mode):
             if(event.y in yRange):
                 decision = Cmp.pressedVerifyOption(event)
                 if(decision):
+                    mode.app.currentOrder = Order()
                     mode.app.setActiveMode(mode.app.entryScreen)
         else:
             if(event.y >= mode.height-mode.optionButtonsHeight):
-                mode.pressedOptions(event)
-
-    def drawOptionButtons(mode, canvas):
-        Rect, Oval = canvas.create_rectangle, canvas.create_oval
-        Text = canvas.create_text
-        buttonWidth, buttonHeight = mode.width//3, mode.optionButtonsHeight
-        buttonFont = mode.app.entryScreen.buttonFont
-        for i in range(3):
-            buttonCx = (buttonWidth//2) + buttonWidth*i
-            buttonCy, message = mode.height-(buttonHeight//2), mode.options[i]
-            if i == 0:
-                color = "indian red"
-            elif i == 1:
-                color = "grey"
-            else:
-                color = "light green"
-                message += "\nTotal: "+str(mode.app.currentOrder.getTotal())+"$"
-            Rect(buttonWidth*i, mode.height,  buttonWidth*(i+1), 
-                mode.height-buttonHeight, fill = color)
-            Text(buttonCx, buttonCy, text = message, font = buttonFont)
+                screen = Cmp.orderOptionsPressed(mode, event)
+                if(screen != None):
+                    if(screen == mode.app.newOrderScreen):
+                        mode.app.currentOrder = Order()
+                        mode.app.setActiveMode(screen)
+                    elif(screen == "checkout"):
+                        if(mode.app.currentOrder.getTotal != 0):
+                            mode.app.logScreen.writeOrder(mode.app.currentOrder)
+                            mode.app.currentOrder = Order()
+                            mode.app.setActiveMode(mode.app.entryScreen)
+                        return
+                    else:
+                        mode.app.setActiveMode(screen)
       
     def redrawAll(mode, canvas):
-        mode.drawOptionButtons(canvas)
+        Cmp.drawOrderOptions(mode, canvas)
         if(Cmp.verifyDecision):
             Cmp.drawVerificationButton(mode, canvas)
         pass
@@ -548,20 +579,33 @@ class Checkout(Mode):
 ########## Menu(Sandwiches/Beverages/Desserts) Screens Functions #############
 
 class Sandwich(object):
-    def __init__(self, kind, price):
+    def __init__(self, kind, price, quantity = 1):
         self.name = kind
         self.price = price
+        self.quantity = 1
         pass
 
 class Beverage(object):
-    def __init__(self, kind, price):
+    def __init__(self, kind, price, quantity = 1):
         self.name = kind
         self.price = price
-        pass
+        self.quantity = 1
+
+class Dessert(object):
+    def __init__(self, kind, price, quantity = 1):
+        self.name = kind
+        self.price = price
+        self.quantity = 1
+
+class Other(object):
+    def __init__(self, kind, price, quantity = 1):
+        self.name = kind
+        self.price = price
+        self.quantity = 1
 
 class Order(object):
-    def __init__(self, cart):
-        self.cart = cart
+    def __init__(self):
+        self.cart = []
         
     def getTotal(self):
         total = 0
@@ -617,8 +661,9 @@ class MyApp(ModalApp):
         app.initializeSystem = InitializeSystem()
         app.calculatorOn, app.getPrice = False, False
         app.showOptions = False
-        app.currentOrder = Order([])
-        app.setActiveMode(app.initializeSystem)
+        app.currentOrder = Order()
+        app.screens = [None, app.currentOrderScreen, "checkout"]
         app.timerDelay = 100
+        app.setActiveMode(app.initializeSystem)
 
 app = MyApp(width=1450, height=850)

@@ -12,6 +12,7 @@ class Components():
         self.initializeCalculator()
         self.initializeVerifyButtonDimensions()
         self.initializeOptionsCardsDimensions()
+        self.initializeOrderOptionDimensions()
         self.scrolling = False
         self.optionsWidth, self.optionsHeight, self.optionsGap = 100, 25, 80
         self.backDropWidth = 250
@@ -33,7 +34,11 @@ class Components():
         self.verifyHeight, self.buttonWidth, self.buttonFont = 150, 250, "times 28 bold"
         self.verifyButtonCy = self.verifyCy+(self.verifyHeight//5*2)
         self.verifyButtonW, self.verifyButtonH = self.verifyWidth//4, self.verifyHeight//4
-            
+
+    def initializeOrderOptionDimensions(self):
+        self.OOHeight, self.options = 200, ["Cancelar\n  Orden", 
+                                        "  Ver\nOrden", "Finalizar\n  Orden"] 
+
     def initializeCalculator(self):
         self.calcNumber, self.prevNumber, self.calcOperation = "0", "0", None
         self.calcEnteringNumber = True
@@ -366,3 +371,30 @@ class Components():
             count += 1
         return None
                 
+    def drawOrderOptions(self, mode, canvas):
+        Rect, Oval = canvas.create_rectangle, canvas.create_oval
+        Text = canvas.create_text
+        buttonWidth, buttonHeight = mode.width//3, self.OOHeight
+        buttonFont = self.buttonFont
+        for i in range(3):
+            buttonCx = (buttonWidth//2) + buttonWidth*i
+            buttonCy, message = mode.height-(buttonHeight//2), self.options[i]
+            if i == 0:
+                color = "indian red"
+            elif i == 1:
+                color = "grey"
+            else:
+                color = "light green"
+                message += "\nTotal: "+str(mode.app.currentOrder.getTotal())+"$"
+            Rect(buttonWidth*i, mode.height,  buttonWidth*(i+1), 
+                mode.height-buttonHeight, fill = color)
+            Text(buttonCx, buttonCy, text = message, font = buttonFont)
+    
+    def orderOptionsPressed(self, mode, event):
+        divider = mode.width//3
+        screen = mode.app.screens[event.x//divider]
+        if(screen == None):
+            self.verifyDecision = True
+            return
+        else:
+            return screen
