@@ -8,30 +8,33 @@ https://www.geeksforgeeks.org/how-to-set-border-of-tkinter-label-widget/
 """
 class Components():
     def __init__(self):
+        self.initializeFonts()
         self.initializeCalculatorDimensions()
         self.initializeCalculator()
         self.initializeVerifyButtonDimensions()
-        self.initializeOptionsCardsDimensions()
         self.initializeOrderOptionDimensions()
         self.scrolling = False
-        self.optionsWidth, self.optionsHeight, self.optionsGap = 100, 25, 80
         self.backDropWidth = 250
         self.optionsTitleGap, self.optionsTitleFont = 30, "times 40 bold italic"
 
-    def initializeOptionsCardsDimensions(self):
-        self.cardFont = "times 28 bold italic"
+    def initializeFonts(self):
+        self.buttonFont, self.cardFont = "times 28 bold", "times 28 bold italic"
+        self.calcButtonsFont = "times 40 bold"
+        self.calcMssgFont = "times 35 bold italic"
+
+    def initializeOptionDimensions():
+        self.optionsWidth, self.optionsHeight, self.optionsGap = 100, 25, 80
 
     def initializeCalculatorDimensions(self):
         self.calcSize, self.calcButtonGap, self.calcWidth = 150, 150, 400
         self.calcHeight, self.calcBorder, self.calcMssgWidth = 400, 30, 200
         self.calcScreenHeight, self.calcScreenWidth = 80, 450
-        self.calcButtonsFont, self.calcNumGap = "times 40 bold", 20
-        self.calcMssgFont, self.calcExitSize = "times 35 bold italic", 70
+        self.calcNumGap, self.calcExitSize = 20, 70
 
     def initializeVerifyButtonDimensions(self):
         self.buttonCy, self.buttonYGap, self.verifyWidth = 200, 250, 250
         self.verifyDecision, self.verifyCy = False, self.buttonCy+self.buttonYGap//2
-        self.verifyHeight, self.buttonWidth, self.buttonFont = 150, 250, "times 28 bold"
+        self.verifyHeight, self.buttonWidth = 150, 250
         self.verifyButtonCy = self.verifyCy+(self.verifyHeight//5*2)
         self.verifyButtonW, self.verifyButtonH = self.verifyWidth//4, self.verifyHeight//4
 

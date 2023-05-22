@@ -1,6 +1,8 @@
-from cmu_112_graphics import *
+#import subprocess, sys
+#subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'openpyxl'])
 from tkinter import *
 from PIL import Image
+from cmu_112_graphics import *
 import random, math, copy, time, pygame, calendar
 from datetime import date
 from openpyxl import Workbook, load_workbook
@@ -186,7 +188,7 @@ class EntryScreen(Mode):
         else:
             mode.buttonWidth, mode.buttonHeight = 250, 150
             mode.buttonGap, mode.buttonCx, mode.buttonCy = 750, 350, 650
-            mode.buttonFont, mode.calcMssg = "times 28 bold", "Calculadora"
+            mode.calcMssg = "Calculadora"
             mode.calcButtonWidth, mode.calcButtonHeight = 250, 75
 
     def timerFired(mode):
@@ -225,7 +227,7 @@ class EntryScreen(Mode):
                 message = "Registro\n     de\nOrdenes"
             Rectangle(buttonCx+gap*i-width, buttonCy-height, 
                         buttonCx+gap*i+width, buttonCy+height, fill = "grey")
-            Text(buttonCx+gap*i, buttonCy, text = message, font = mode.buttonFont)
+            Text(buttonCx+gap*i, buttonCy, text = message, font = Cmp.buttonFont)
             
     def drawCalculatorButton(mode, canvas):
         Rectangle, Text = canvas.create_rectangle, canvas.create_text
@@ -322,7 +324,6 @@ class NewOrder(Mode):
         Rect, Oval = canvas.create_rectangle, canvas.create_oval
         Text = canvas.create_text
         buttonWidth, buttonHeight = mode.width//3, mode.optionButtonsHeight
-        buttonFont = mode.app.entryScreen.buttonFont
         for i in range(3):
             buttonCx = (buttonWidth//2) + buttonWidth*i
             buttonCy, message = mode.height-(buttonHeight//2), mode.options[i]
@@ -336,21 +337,20 @@ class NewOrder(Mode):
                 message += "\nTotal: "+str(mode.app.currentOrder.getTotal())+"$"
             Rect(buttonWidth*i, mode.height,  buttonWidth*(i+1), 
                 mode.height-buttonHeight, fill = color)
-            Text(buttonCx, buttonCy, text = message, font = buttonFont)
+            Text(buttonCx, buttonCy, text = message, font = Cmp.buttonFont)
       
     def drawButtons(mode, canvas):
         Rect, Oval = canvas.create_rectangle, canvas.create_oval
         Text = canvas.create_text
         buttonW, buttonH = mode.buttonWidth, mode.buttonHeight
         xGap, yGap, color = mode.buttonXGap, mode.buttonYGap, mode.buttonColor
-        buttonFont = mode.app.entryScreen.buttonFont
         for i in range(len(mode.choices)):
             message = mode.choices[i]
             buttonCx = mode.buttonCx + xGap*(i%2)
             buttonCy = mode.buttonCy + yGap*(i//2)
             Rect(buttonCx-buttonW, buttonCy-buttonH, 
                 buttonCx+buttonW, buttonCy+buttonH, fill = color)
-            Text(buttonCx, buttonCy, text = message, font = buttonFont)
+            Text(buttonCx, buttonCy, text = message, font = Cmp.buttonFont)
         Cmp.drawOrderOptions(mode, canvas)
 
     def redrawAll(mode, canvas):
