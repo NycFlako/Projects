@@ -1,16 +1,17 @@
-/*
-Documentation for excel sheets:
-https://xuri.me/excelize/en/workbook.html#NewFile
-
-Documentations for the graphics:
-*/
 package main
 
 import (
 	"fmt"
+	wb "workbook/workbook"
+	gp "graphics/graphics"
 )
 
 func main() {
-	name := "Flako"
-	fmt.Println("Developer: ", name)
+	f := wb.Get_file()
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
 }
